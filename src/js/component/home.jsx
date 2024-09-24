@@ -4,18 +4,73 @@ const Home = () => {
     const [inputValue, setInputValue] = useState("");
     const [todos, setTodos] = useState([]);
 	const [showAlert, setShowAlert] = useState(false);
-
-	const loadTodos = () => {
-        fetch('https://playground.4geeks.com/todo/users/miguel_navas')
-            .then(response => response.json())
-            .then(data => {
-                setTodos(Array.isArray(data) ? data : []);
-            })
-    };
+    const [newUser, setNewUser] = useState("");
+    const [user, setUser] = useState("");
+    const [logStatus, setLogStatus] = useState("Log-in as:");
+    
+    const usersUrl = "https://playground.4geeks.com/todo/users/";
+    const todosUrl = "https://playground.4geeks.com/todo/todos/";
 
     useEffect(() => {
-        loadTodos();
-    }, []);
+        createNewUser("miguel_navas");
+    },[])
+
+    const deleteUser = () => {
+        if (todos.length > 0) {
+            deleteAllTodos()
+            eliminarUsuario();
+        }
+    };
+
+    const eliminarUsuario = () => {
+        fetch(usersUrl + user, { 
+            method: "DELETE",
+        })
+        .then(response => {
+            if (response.ok) {
+                setUser("");
+                setNewUser("");
+            } else {
+                console.error("Error al eliminar el usuario");
+            }
+        })
+        .catch(error => console.error("Error eliminando el usuario:", error));
+    };
+
+
+    const createNewUser = (user) => {
+        fetch(usersUrl + user, {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name: user }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                setUser(user);
+            })
+            .catch(error => {
+                console.error("Error al crear usuario:", error);
+            });
+    };
+
+	const loadTodos = () => {
+        fetch(usersUrl + user)
+            .then(response => response.json())
+            .then(data => {
+                setTodos(data.todos || []);
+            })
+            .catch(error => {
+                console.error("Error al cargar todos:", error);
+            });
+    };
+    
+    useEffect(() => {
+        if (user) {
+            loadTodos();
+        }
+    }, [user]);
 
     const addTodo = () => {
 		if (inputValue.trim() === "") {
@@ -26,7 +81,7 @@ const Home = () => {
         setShowAlert(false); 
 
         const newTodo = { label: inputValue, is_done: false };
-        fetch('https://playground.4geeks.com/todo/todos/miguel_navas', {
+        fetch(todosUrl + user, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -41,7 +96,7 @@ const Home = () => {
     };
 
     const deleteTodo = (id) => {
-        fetch(`https://playground.4geeks.com/todo/todos/${id}`, {
+        fetch(`${todosUrl}${id}`, {
             method: 'DELETE',
             headers: {
                 'accept': 'application/json'
@@ -58,7 +113,7 @@ const Home = () => {
 
     const deleteAllTodos = () => {
         const deletePromises = todos.map(todo =>
-            fetch(`https://playground.4geeks.com/todo/todos/${todo.id}`, {
+            fetch(`${todosUrl}${todo.id}`, {
                 method: 'DELETE',
                 headers: {
                     'accept': 'application/json'
@@ -73,7 +128,35 @@ const Home = () => {
 
     return (
         <div>
-            <h1>todos</h1>
+            <h1>to-do's</h1>
+
+            <div className="input-group mb-3">
+                <span className="input-group-text" id="basic-addon1">{logStatus}</span>
+                <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="New Username"
+
+                    onChange={(e) => setNewUser(e.target.value)}
+                    value={newUser}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            createNewUser(newUser);
+                            setLogStatus("Logged as")
+                        }
+                    }}
+                />
+
+            <button 
+            type="button" 
+            className="btn btn-primary"
+            onClick={() => {
+                deleteUser();
+                setLogStatus("Log-in");
+            }}
+            >Log-out</button>
+            </div>
+
             <div className="shadow">
 
 			{showAlert && (
@@ -121,4 +204,3 @@ const Home = () => {
 };
 
 export default Home;
-
